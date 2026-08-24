@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: anna-training-db
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - anna_training_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: anna-training-app
+
+    ports:
+      - "3100:3000"
+
+    volumes:
+      - .:/app
+      - anna_training_node_modules:/app/node_modules
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    command: >
+      sh -c "
+      npm install --no-audit --no-fund &&
+      npx prisma generate &&
+      npm run dev -- -H 0.0.0.0
+      "
+
+    restart: unless-stopped
+
+volumes:
+  anna_training_node_modules:
+  anna_training_postgres_data:

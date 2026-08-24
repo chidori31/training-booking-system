@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  login              String   @unique @db.VarChar(50)
+  passwordHash       String   @db.VarChar(255)
+  fullName           String   @db.VarChar(150)
+  phone              String   @unique @db.VarChar(30)
+  age                Int
+  role               UserRole @default(CLIENT)
+  isBlocked          Boolean  @default(false)
+  mustChangePassword Boolean  @default(false)
+
+  vkUserId          String? @unique @db.VarChar(30)
+  vkMessagesAllowed Boolean @default(false)
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique @db.Char(64)
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
